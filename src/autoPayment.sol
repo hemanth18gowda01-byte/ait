@@ -32,4 +32,27 @@ contract AutoPayment {
         return paymentVouchers[_user];
     }
 
+    function splitPaymentVoucher(bytes32 _paymentId, uint256 _splitAmount) external {
+        PaymentVoucher[] storage userVouchers = paymentVouchers[msg.sender];
+        for (uint256 i = 0; i < userVouchers.length; i++) {
+            if (userVouchers[i].paymentId == _paymentId) {
+                require(userVouchers[i].amount >= _splitAmount, "Insufficient funds");
+                userVouchers[i].amount -= _splitAmount;
+                paymentVouchers[msg.sender].push(PaymentVoucher({
+                    paymentId: keccak256(abi.encodePacked(msg.sender, _splitAmount, block.timestamp)),
+                    fromAddress: msg.sender,
+                    toAddress: address(0),
+                    amount: _splitAmount,
+                    timestamp: abi.encodePacked(block.timestamp)
+                }));
+                return;
+            }
+        }
+        revert("Payment voucher not found");
+    }
+
+    function receivePaymentVoucher(bytes32 _paymentId) external {
+        
+    }
+
 }
