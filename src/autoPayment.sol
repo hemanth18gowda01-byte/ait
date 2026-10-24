@@ -8,47 +8,50 @@ contract AutoPayment {
         bytes32 paymentId;
         address fromAddress;
         address toAddress;
-        uint256 amount;
+        uint256 valuation;
+        bytes timestamp;
+    }
+
+    struct SplitPaymentVoucher{
+        bytes32 splitedPaymentId;
+        address fromAddress;
+        address toAddress;
+        uint256 valuation;
         bytes timestamp;
     }
 
     PaymentVoucher[] public vouchers;
-    mapping(address => PaymentVoucher[]) public paymentVouchers;
+    SplitPaymentVoucher[] public splitVouchers;
+    
+    bytes32 => mapping(PaymentVoucher[] => SplitPaymentVoucher[])) public paymentVouchers;
 
     function createPaymentVoucher(uint256 _amount,PaymentVoucher memory ) payable external {
         require(msg.sender != address(0), "Invalid sender address");
         require(_amount > 0, "Amount must be greater than zero");
         require(msg.value >= _amount, "Insufficient funds sent");
-        paymentVouchers[msg.sender].push(PaymentVoucher({
-            paymentId: keccak256(abi.encodePacked(msg.sender, _amount, block.timestamp)),
+        bytes32 _paymentId = keccak256(abi.encodePacked(msg.sender, _amount, block.timestamp));
+        paymentVouchers[_paymentId].push(PaymentVoucher({
+            paymentId: _paymentId,
             fromAddress: msg.sender,
             toAddress: address(0),
-            amount: _amount,
+            valuation: _amount,
             timestamp: abi.encodePacked(block.timestamp)
         }));
     }
 
-    function getPaymentVouchers(address _user) external view returns (PaymentVoucher[] memory) {
-        return paymentVouchers[_user];
+    function getPaymentVouchers(bytes32 _paymentId) external view returns (PaymentVoucher[] memory) {
+        return paymentVouchers[_paymentId];
     }
 
-    function splitPaymentVoucher(bytes32 _paymentId, uint256 _splitAmount) external {
-        PaymentVoucher[] storage userVouchers = paymentVouchers[msg.sender];
-        for (uint256 i = 0; i < userVouchers.length; i++) {
-            if (userVouchers[i].paymentId == _paymentId) {
-                require(userVouchers[i].amount >= _splitAmount, "Insufficient funds");
-                userVouchers[i].amount -= _splitAmount;
-                paymentVouchers[msg.sender].push(PaymentVoucher({
-                    paymentId: keccak256(abi.encodePacked(msg.sender, _splitAmount, block.timestamp)),
-                    fromAddress: msg.sender,
-                    toAddress: address(0),
-                    amount: _splitAmount,
-                    timestamp: abi.encodePacked(block.timestamp)
-                }));
-                return;
-            }
-        }
-        revert("Payment voucher not found");
+    function splitPaymentVoucher(bytes32 _paymentId, uint256 _splitAmount) payable external {
+        SplitPaymentVoucher[] storage vouchers = paymentVouchers[_paymentId];
+        paymentVouchers[_paymentId].push(SplitPaymentVoucher({
+            paymentId: _paymentId,
+            fromAddress: msg.sender,
+            toAddress: address(0),
+            amount: _splitAmount,
+            timestamp: abi.encodePacked(block.timestamp)
+        }));
     }
 
     function receivePaymentVoucher(bytes32 _paymentId) external {
