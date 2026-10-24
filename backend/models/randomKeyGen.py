@@ -6,3 +6,5 @@ def generate_random_key():
 
 print("Random Key:", generate_random_key())
 
+
+
