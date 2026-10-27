@@ -8,4 +8,4 @@ class SplitPaymentVoucher:
         self.valuation = valuation
         self.timestamp = timestamp
 
-
+    def get_hash(self):
