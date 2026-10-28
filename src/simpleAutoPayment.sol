@@ -11,13 +11,15 @@ contract AutoPayment{
         address toAddress;
         uint256 valuation;
         uint256 timestamp;
+        uint256 expirationTime;
     }
 
     event PaymentVoucherCreated(
         bytes32 indexed paymentId,
         address indexed fromAddress,
         int256 valuation,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 expirationTime
     );
 
     event PaymentVoucherTransferred(
@@ -25,7 +27,8 @@ contract AutoPayment{
         address indexed fromAddress,
         address indexed toAddress,
         int256 valuation,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 expirationTime
     );
     
 
@@ -42,9 +45,10 @@ contract AutoPayment{
             fromAddress: msg.sender,
             toAddress: address(0),
             valuation: _amount,
-            timestamp: block.timestamp
+            timestamp: block.timestamp,
+            expirationTime: block.timestamp + 7 days
         });
-        emit PaymentVoucherCreated(_paymentId, msg.sender, int(_amount), block.timestamp);
+        emit PaymentVoucherCreated(_paymentId, msg.sender, int(_amount), block.timestamp, block.timestamp + 7 days);
     }
 
     function getPaymentVouchers(bytes32 _paymentId) external view virtual returns (PaymentVoucher memory) {
@@ -54,17 +58,18 @@ contract AutoPayment{
     function transferPaymentVoucher(bytes32 _paymentId, address _toAddress,uint256 _amount) payable external virtual {
         require(paymentVouchers[_paymentId].fromAddress == msg.sender, "Only the sender can transfer the payment voucher");
         require(paymentVouchers[_paymentId].toAddress == address(0), "Payment voucher has already been transferred");
+        require(paymentVouchers[_paymentId].expirationTime > block.timestamp, "Payment voucher has expired");
         paymentVouchers[_paymentId].toAddress = _toAddress;
         if (_amount == paymentVouchers[_paymentId].valuation) {
             paymentVouchers[_paymentId].valuation = 0;
             (bool sent, ) = _toAddress.call{value: _amount}("");
             require(sent, "Failed to send Ether");
-            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress,int(_amount), block.timestamp);
+            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress,int(_amount), block.timestamp, paymentVouchers[_paymentId].expirationTime);
 
         } else if (_amount < paymentVouchers[_paymentId].valuation) {
             (bool sent, ) = _toAddress.call{value: _amount}("");
             require(sent, "Failed to send Ether");
-            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress, int(_amount), block.timestamp);
+            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress, int(_amount), block.timestamp, paymentVouchers[_paymentId].expirationTime);
             paymentVouchers[_paymentId].valuation = paymentVouchers[_paymentId].valuation - _amount;
             paymentVouchers[_paymentId].timestamp = block.timestamp;
             paymentVouchers[_paymentId].toAddress = address(0);
