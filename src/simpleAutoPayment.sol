@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-
-contract AutoPayment{
+contract AutoPayment {
+    
 
     struct PaymentVoucher{
         bytes32 paymentId;
@@ -17,7 +17,7 @@ contract AutoPayment{
     event PaymentVoucherCreated(
         bytes32 indexed paymentId,
         address indexed fromAddress,
-        int256 valuation,
+        uint256 valuation,
         uint256 timestamp,
         uint256 expirationTime
     );
@@ -26,7 +26,7 @@ contract AutoPayment{
         bytes32 indexed paymentId,
         address indexed fromAddress,
         address indexed toAddress,
-        int256 valuation,
+        uint256 valuation,
         uint256 timestamp,
         uint256 expirationTime
     );
@@ -48,36 +48,45 @@ contract AutoPayment{
             timestamp: block.timestamp,
             expirationTime: block.timestamp + 7 days
         });
-        emit PaymentVoucherCreated(_paymentId, msg.sender, int(_amount), block.timestamp, block.timestamp + 7 days);
+        emit PaymentVoucherCreated(_paymentId, msg.sender, _amount, block.timestamp, block.timestamp + 7 days);
     }
 
     function getPaymentVouchers(bytes32 _paymentId) external view virtual returns (PaymentVoucher memory) {
         return paymentVouchers[_paymentId];
     }
 
-    function transferPaymentVoucher(bytes32 _paymentId, address _toAddress,uint256 _amount) payable external virtual {
+    function transferPaymentVoucher(bytes32 _paymentId, address _toAddress,uint256 _amount,uint256 _expirationTime) payable external virtual {
         require(paymentVouchers[_paymentId].fromAddress == msg.sender, "Only the sender can transfer the payment voucher");
         require(paymentVouchers[_paymentId].toAddress == address(0), "Payment voucher has already been transferred");
-        require(paymentVouchers[_paymentId].expirationTime > block.timestamp, "Payment voucher has expired");
+        require(paymentVouchers[_paymentId].expirationTime > _expirationTime, "Payment voucher has expired");
         paymentVouchers[_paymentId].toAddress = _toAddress;
         if (_amount == paymentVouchers[_paymentId].valuation) {
             paymentVouchers[_paymentId].valuation = 0;
             (bool sent, ) = _toAddress.call{value: _amount}("");
             require(sent, "Failed to send Ether");
-            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress,int(_amount), block.timestamp, paymentVouchers[_paymentId].expirationTime);
+            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress, _amount, block.timestamp, paymentVouchers[_paymentId].expirationTime);
 
         } else if (_amount < paymentVouchers[_paymentId].valuation) {
             (bool sent, ) = _toAddress.call{value: _amount}("");
             require(sent, "Failed to send Ether");
-            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress, int(_amount), block.timestamp, paymentVouchers[_paymentId].expirationTime);
+            emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress, _amount, block.timestamp, paymentVouchers[_paymentId].expirationTime);
             paymentVouchers[_paymentId].valuation = paymentVouchers[_paymentId].valuation - _amount;
-            paymentVouchers[_paymentId].timestamp = block.timestamp;
+            paymentVouchers[_paymentId].timestamp = _expirationTime;
             paymentVouchers[_paymentId].toAddress = address(0);
             paymentVouchers[_paymentId].splitedPaymentId = keccak256(abi.encodePacked(msg.sender, _amount, block.timestamp));
         } else {
             revert("Transfer amount exceeds the payment voucher valuation");
 
         }
+    }
+
+    function revertVoucherAmountAfterExpiration(bytes32 _paymentId,uint256 _expirationTime) external payable virtual {
+        require(paymentVouchers[_paymentId].fromAddress == msg.sender, "Only the sender can revert the payment voucher");
+        require(paymentVouchers[_paymentId].expirationTime <= _expirationTime, "Payment voucher has not expired yet");
+        uint256 amountToRevert = paymentVouchers[_paymentId].valuation;
+        paymentVouchers[_paymentId].valuation = 0;
+        (bool sent, ) = msg.sender.call{value: amountToRevert}("");
+        require(sent, "Failed to send Ether");
     }
 
 }

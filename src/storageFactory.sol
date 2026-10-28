@@ -17,7 +17,24 @@ contract StorageFactory is AutoPayment {
         return autoPaymentContract.getPaymentVouchers(_paymentId);
     }
 
-    function transferPaymentVoucher(bytes32 _paymentId, address _toAddress, uint256 _amount) external payable override{
-        autoPaymentContract.transferPaymentVoucher{value: msg.value}(_paymentId, _toAddress, _amount);
-    }
+    function transferPaymentVoucher(
+         bytes32 _paymentId,
+         address _toAddress,
+         uint256 _amount,
+         uint256 _expirationTime
+     ) external payable override {
+         autoPaymentContract.transferPaymentVoucher{
+             value: msg.value
+         }(_paymentId, _toAddress, _amount, _expirationTime);
+     }
+
+     function revertVoucherAmountAfterExpiration(
+         bytes32 _paymentId,
+         uint256 _expirationTime
+     ) external payable override {
+         autoPaymentContract.revertVoucherAmountAfterExpiration{
+             value: msg.value
+         }(_paymentId, _expirationTime);
+     }
+     
 }
