@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
+import {PriceConverter} from "./priceConverter.sol";
+import {AggregatorV3Interface} from "../lib/chainlink/contracts/src/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AutoPayment {
-    
+    using PriceConverter for uint256;
 
     struct PaymentVoucher{
         bytes32 paymentId;
