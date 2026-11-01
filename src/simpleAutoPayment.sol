@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 import {PriceConverter} from "./priceConverter.sol";
-import {AggregatorV3Interface} from "../lib/chainlink/contracts/src/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AutoPayment {
     using PriceConverter for uint256;
@@ -63,9 +63,9 @@ contract AutoPayment {
         require(paymentVouchers[_paymentId].expirationTime > _expirationTime, "Payment voucher has expired");
         paymentVouchers[_paymentId].toAddress = _toAddress;
         if (_amount == paymentVouchers[_paymentId].valuation) {
-            paymentVouchers[_paymentId].valuation = 0;
             (bool sent, ) = _toAddress.call{value: _amount}("");
             require(sent, "Failed to send Ether");
+            delete paymentVouchers[_paymentId];
             emit PaymentVoucherTransferred(_paymentId, msg.sender, _toAddress, _amount, block.timestamp, paymentVouchers[_paymentId].expirationTime);
 
         } else if (_amount < paymentVouchers[_paymentId].valuation) {
