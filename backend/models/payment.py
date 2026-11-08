@@ -2,10 +2,11 @@ import hashlib
 import datetime
 
 class PaymentVoucherCreation:
-    def __init__(self, paymentId: str, fromAddress: str, toAddress: str, valuation: int, timestamp: bytes, expirationTime: bytes):
+    def __init__(self, paymentId: str,voucherId:str, fromAddress: str, toAddress: str, valuation: int, timestamp: bytes, expirationTime: bytes):
         self.paymentId= paymentId
+        self.voucherId= ''
         self.valuation = valuation
-        self.toAddress = toAddress
+        self.toAddress = ''
         self.timestamp = timestamp
         self.expirationTime = expirationTime
 
@@ -19,16 +20,12 @@ class PaymentVoucherCreation:
         self.timestamp = datetime.datetime.utcnow()
         self.paymentId = self.generate_hash(self.paymentId, _amount, self.timestamp, self.expirationTime)
 
+    def transferPaymentVoucher(self,_paymentId,_toAddress,_amountToSend,_timestamp):
+        
+
+
+
     
         
-class PaymentVoucherTransfer(PaymentVoucherCreation):
-    def __init__(self,paymentId:str,toAddress:str,amountToSend:int,timestamp:bytes):
-        self.paymentId = paymentId
-        self.toAddress = toAddress
-        self.amountToSend = amountToSend
-        self.timestamp = timestamp
 
-    def transferPaymentVoucher(self,_paymentId,_toAddress,_amountToSend,_timestamp):
-        self.paymentId = _paymentId
-        
 
